@@ -14,6 +14,7 @@ import numpy as np
 from nartfem.axi import load_model, run
 from nartfem.axi import mesh as meshmod
 
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("json", nargs="+")
