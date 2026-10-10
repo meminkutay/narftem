@@ -15,11 +15,18 @@ from nartfem.axi import load_model, run
 from nartfem.axi import mesh as meshmod
 
 
+# ---- CONFIG: used when run without command-line arguments (PyCharm "Run")
+CONFIG = dict(json="examples/FL_AC3_B5_SG4k_GG.json", rmax=None, zmax=None, matlab_mesh=False, picard=False)
+
+
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("json"); p.add_argument("--rmax", type=float); p.add_argument("--zmax", type=float)
-    p.add_argument("--matlab-mesh", action="store_true"); p.add_argument("--picard", action="store_true")
+    p.add_argument("json", nargs="?", default=CONFIG["json"]); p.add_argument("--rmax", type=float, default=CONFIG["rmax"])
+    p.add_argument("--zmax", type=float, default=CONFIG["zmax"])
+    p.add_argument("--matlab-mesh", action="store_true", default=CONFIG["matlab_mesh"])
+    p.add_argument("--picard", action="store_true", default=CONFIG["picard"])
     a = p.parse_args()
+    os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))   # paths relative to the repo
     model = load_model(a.json)
     if a.picard:
         model.scheme = "picard"

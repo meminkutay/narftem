@@ -129,7 +129,12 @@ def main(json_path, dump_path=None):
         print("figure skipped:", e)
 
 
+# ---- CONFIG: used when run without command-line arguments (PyCharm "Run")
+CONFIG = dict(json="examples/FL_AC3_B5_SG4k_GG.json", dump=None)
+
 if __name__ == "__main__":
+    os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))   # paths relative to the repo
     if len(sys.argv) < 2:
-        print(__doc__); sys.exit(1)
-    main(*sys.argv[1:3])
+        main(CONFIG["json"], CONFIG["dump"])
+    else:
+        main(*sys.argv[1:3])
