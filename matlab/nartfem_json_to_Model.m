@@ -70,7 +70,9 @@ for i = 1:NL
         case 'elastic_depth'
             Model.Layers.MaterialType{i}    = 'Elastic:MrFunc';
             tab = L.E_table;
-            Model.Layers.MrPredictiveFunc{i}= @(z) interp1(tab(:,1), tab(:,2), z, 'linear', 'extrap');
+            % MatFEA evaluates this at the FE coordinate z <= 0 (see Zinew in f_struc_respNonlinGG_MatFEA_V2.m);
+            % the table is in positive depth, hence -z.
+            Model.Layers.MrPredictiveFunc{i}= @(z) interp1(tab(:,1), tab(:,2), -z, 'linear', 'extrap');
             Model.Layers.ResilientModulus(i)= tab(1,2);
         case {'universal', 'ktheta'}
             if strcmp(L.type, 'universal'); mt = 'Nonlin:Universal'; else; mt = 'Nonlin:KTheta'; end

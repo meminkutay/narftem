@@ -42,7 +42,12 @@ For MEAPA-style superposition of several tires: `nartfem.axi.superpose.superpose
 
 ```matlab
 addpath('<MatFEA V4 folder>'); addpath('<nartfem>/matlab');
+    addpath('/Users/Kutay/Library/CloudStorage/GoogleDrive-kutay@mtu.edu/My Drive/_Docs/_MEAPACodes/_MEAPA_MATFEA/_MEAPA_MatFEA_V4_20261001')
+    addpath('/Users/Kutay/PycharmProjects/nartfem/matlab')
+    
 run_matfea_dump('<nartfem>/examples/FL_AC3_B5_SG4k_GG.json');   % writes ..._matfea_dump.json
+    run_matfea_dump('examples/FL_AC3_B5_SG4k_GG.json');
+    
 ```
 ```bash
 python scripts/compare_with_matlab.py examples/FL_AC3_B5_SG4k_GG.json
