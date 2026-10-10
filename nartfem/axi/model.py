@@ -132,6 +132,7 @@ class Model:
     scheme: str = "anderson"              # 'anderson' (robust) or 'picard' (MatFEA update)
     anderson_memory: int = 10
     anderson_beta: float = 0.8
+    geogrid_solver: str = "vector"         # 'vector' (all radial points at once) or 'scalar' (brentq per point, as MatFEA)
     verbose: bool = True
 
     # ---- derived -------------------------------------------------------------
@@ -199,7 +200,8 @@ class Model:
              "solver": {"gauss_points": self.gauss_points, "max_iter": self.max_iter,
                         "reliability_pct": self.reliability_pct, "max_error_pct": self.max_error_pct,
                         "atm_pressure_psi": self.atm_pressure_psi, "scheme": self.scheme,
-                        "anderson_memory": self.anderson_memory, "anderson_beta": self.anderson_beta}}
+                        "anderson_memory": self.anderson_memory, "anderson_beta": self.anderson_beta,
+                        "geogrid_solver": self.geogrid_solver}}
         for L in self.layers:
             ld = asdict(L)
             ld["k"] = list(L.k)
@@ -232,7 +234,8 @@ def model_from_dict(d: dict) -> Model:
                  max_error_pct=sol.get("max_error_pct", 2.0),
                  atm_pressure_psi=sol.get("atm_pressure_psi", 14.706),
                  scheme=sol.get("scheme", "anderson"), anderson_memory=sol.get("anderson_memory", 10),
-                 anderson_beta=sol.get("anderson_beta", 0.8))
+                 anderson_beta=sol.get("anderson_beta", 0.8),
+                 geogrid_solver=sol.get("geogrid_solver", "vector"))
 
 
 def load_model(path: str) -> Model:

@@ -43,6 +43,7 @@ class Results:
         self.elem_layer = mesh.layer + 1
         self.elem_strain = state.strain.copy(); self.elem_stress = state.stress.copy()
         self.u = state.u.copy()
+        self._ed = ed; self._D_elem = state.D.copy()
         self.gg_planes = {k + 1: [dict(z_in=-p["z"], r_in=p["r"], delsig_psi=p["delsig"]) for p in v]
                           for k, v in state.gg_planes.items()}
         self.converged = state.converged; self.iterations = state.iterations
@@ -125,6 +126,50 @@ class Results:
             out[bad] = near(r[bad], z[bad])
         return out
 
+    def fe_at(self, name, r, z, side="above"):
+        """Exact FE value of a response ('strain_t', 'stress_z', ...) at (r, depth>0): the point is
+        located in its element and B(xi, eta) d is evaluated there - no interpolation between
+        element centers.  On a layer interface, side='above' takes the element above (e.g. the AC
+        bottom fiber), side='below' the one below (e.g. the subgrade top).  Vectorized over points."""
+        r = np.atleast_1d(np.asarray(r, float)); z = np.atleast_1d(np.asarray(z, float))
+        from .elements import shape_function, b_matrix
+        mesh = self.mesh; ed = self._ed
+        coords = mesh.nodes[mesh.conn]                                  # (ne,4,2), z <= 0
+        zq = -z
+        comp = {"r": 0, "z": 1, "t": 2, "rz": 3}[name.split("_")[1]]
+        out = np.full(r.size, np.nan)
+        rmin, rmax = coords[:, :, 0].min(1), coords[:, :, 0].max(1)
+        zmin, zmax = coords[:, :, 1].min(1), coords[:, :, 1].max(1)
+        tol = 1e-9 * max(mesh.width, mesh.depth)
+        for k in range(r.size):
+            cand = np.flatnonzero((rmin <= r[k] + tol) & (rmax >= r[k] - tol) & (zmin <= zq[k] + tol) & (zmax >= zq[k] - tol))
+            if cand.size == 0:
+                continue
+            if cand.size > 1:                                           # on an edge/interface: pick by side
+                zc = mesh.center[cand, 1]
+                cand = cand[np.argsort(zc)[::-1]] if side == "above" else cand[np.argsort(zc)]
+                # among those, prefer the one whose center r is closest
+                top = cand[np.isclose(mesh.center[cand, 1], mesh.center[cand[0], 1])]
+                cand = top[np.argsort(np.abs(mesh.center[top, 0] - r[k]))]
+            e = cand[0]
+            c = coords[e]
+            xi = np.zeros(2)                                            # Newton for natural coordinates
+            for _ in range(20):
+                N, dN = shape_function(xi[0], xi[1])
+                x = N @ c
+                J = dN.T @ c                                            # (2,2): d(r,z)/d(xi,eta)
+                dxi = np.linalg.solve(J.T, np.array([r[k], zq[k]]) - x)
+                xi += dxi
+                if np.abs(dxi).max() < 1e-12:
+                    break
+            xi = np.clip(xi, -1.0, 1.0)
+            N, dN = shape_function(xi[0], xi[1])
+            B, _, _ = b_matrix(N, dN, c[None])
+            strain = B[0] @ self.u[ed.dof[e]]
+            val = strain if name.startswith("strain") else self._D_elem[e] @ strain
+            out[k] = val[comp] * (-1 if comp == 3 else 1)
+        return out if out.size > 1 else out[0]
+
     def response_at(self, r, z):
         """Dict of all strain/stress components at (r, z)."""
         return {k: self.interp(k, r, z) for k in ("strain_r", "strain_z", "strain_t", "strain_rz",
@@ -189,4 +234,28 @@ class Results:
                 ax.axhline(p["z_in"], color="r", lw=1.0, ls="--")
         plt.colorbar(pc, ax=ax, label=label, shrink=0.8)
         ax.set_title("\n".join(textwrap.wrap(self.model.name or "nartfem.axi", 70)), fontsize=9)
+        return ax
+
+    def plot_mesh(self, rmax=None, zmax=None, ax=None):
+        """Element outlines (colored by layer), load extent and geogrid planes."""
+        import matplotlib.pyplot as plt
+        from matplotlib.collections import PolyCollection
+        mesh = self.mesh
+        rmax = rmax or 5 * self.model.radius_in
+        zmax = zmax or 1.2 * self.model.thickness_cum[-1]
+        polys = mesh.nodes[mesh.conn].copy(); polys[:, :, 1] *= -1
+        m = (mesh.center[:, 0] <= rmax * 1.5) & (-mesh.center[:, 1] <= zmax * 1.5)
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(8, 4.8))
+        cols = ["#f4e3b2", "#cfe3c6", "#c9d6e8", "#e8cfd6", "#ddd"]
+        fc = [cols[int(l) % len(cols)] for l in mesh.layer[m]]
+        ax.add_collection(PolyCollection(polys[m], facecolors=fc, edgecolors="0.35", linewidths=0.3))
+        ax.plot([0, self.model.radius_in], [0, 0], "r-", lw=3, label="tire pressure")
+        for L, planes in self.gg_planes.items():
+            for p in planes:
+                ax.axhline(p["z_in"], color="r", lw=1.0, ls="--", label="geogrid")
+        ax.set_xlim(0, rmax); ax.set_ylim(zmax, 0); ax.set_aspect("equal")
+        ax.set_xlabel("r (in)"); ax.set_ylabel("depth (in)")
+        ax.set_title("mesh: %d nodes, %d elements (%s)" % (mesh.n_nodes, mesh.n_elements, mesh.source), fontsize=9)
+        ax.legend(loc="lower right", fontsize=8)
         return ax

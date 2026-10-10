@@ -97,18 +97,26 @@ iterations. `scheme = "picard"` reproduces the MatFEA update for one-to-one comp
 When comparing converged results with MATLAB, differences therefore appear only where MatFEA
 oscillates; the linear solve and the first update are identical.
 
-## Verification done so far
+## Verification (MATLAB R2026b, identical mesh, October 2026)
 
-* Homogeneous half-space (two layers, same E): surface deflection 2.3 % below the Boussinesq
-  value (finite domain 40a × 60a with fixed edges), vertical stresses on the axis within 1–4 %.
-* Comparison plumbing checked with a synthetic dump (imported mesh with rotated connectivity:
-  all quantities identical to 1e-16).
-* FL 3/5/4k case: the geogrid at the base bottom produces Δσ3 ≈ 7–10 psi on its plane, but on
-  the axis the bottom of the base is in horizontal **tension** (~27 psi) in the FE solution, so the
-  tension clip removes the confinement there and the AC-bottom strain does not change; the
-  modulus only changes off-axis. This reproduces the small geogrid effect seen in the MEAPA runs.
-* The MATLAB-vs-Python comparison on the identical mesh is to be run on a machine with
-  MATLAB (`run_matfea_dump.m`).
+`scripts/compare_with_matlab.py` on the three examples (MatFEA mesh imported from the dump):
+
+| case | linear solve | 1st modulus update | geogrid delta-sigma-3 | Picard path vs MatFEA |
+|---|---|---|---|---|
+| FL 3/5/4k, no geogrid | 6e-12 | 1e-6 | - | 7e-6 over all 60 iterations |
+| FL 3/5/4k, geogrid at base bottom | 6e-12 | 9e-4 | 1 % | diverges late (MatFEA oscillates, final error 805 %) |
+| EL 4/8/15k, geogrid at mid-base | 1e-12 | 2e-3 | 0.7 % | 1e-3 (both end at ~2.8 %) |
+
+(max |difference| / max |reference|). The sub-percent differences with a geogrid come from the
+scattered interpolation of the stresses onto the geogrid plane (MATLAB scatteredInterpolant vs
+scipy LinearNDInterpolator); everything else is identical to solver round-off. MatFEA reports
+converged = false for all three cases (errors 539 %, 805 %, 2.9 %); the Anderson scheme converges
+in 28, 53 and 4 iterations.
+
+Other checks: homogeneous half-space surface deflection 2.3 % below the Boussinesq value (finite
+domain with fixed edges), axis stresses within 1-4 %. In the FL case the bottom of the base is in
+horizontal tension (~27 psi) on the axis, so the tension clip removes the geogrid confinement
+there and the AC-bottom strain is unchanged; the modulus changes only off-axis.
 
 ## Next: nartfem.solid3d
 

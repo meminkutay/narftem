@@ -35,6 +35,7 @@ class State:
         self.delsig = np.zeros(ne)
         self.MrError = np.zeros(ne)
         self.gg_planes = {}
+        self.gg_cache = {}       # per layer: precomputed interpolation weights (point set is fixed)
         self.nonlin = np.array([model.layers[i].is_nonlinear for i in self.layer])
         self.gg_layers = [i for i, L in enumerate(model.layers) if L.geogrids]
         self.gz = None   # set by run
@@ -58,7 +59,8 @@ class State:
             if L.geogrids and i in self.gg_layers:
                 pts = self._layer_points(i, idx)
                 Mr_i, ds_i, planes = gg.update_layer(model, res, i, pts, idx, mesh.center[idx],
-                                                     self.stress[idx], self.gz[idx], mesh.width)
+                                                     self.stress[idx], self.gz[idx], mesh.width,
+                                                     cache=self.gg_cache.setdefault(i, {}))
                 Mr_new[idx] = Mr_i
                 self.delsig[idx] = ds_i
                 self.gg_planes[i] = planes
@@ -71,8 +73,9 @@ class State:
         self.MrError = np.where(self.nonlin, np.abs(1 - 1 / ratio), 0.0)
         changed = np.flatnonzero(self.nonlin & (ratio != 1.0))
         if changed.size:
+            # isotropic element with fixed nu: D and Ke are proportional to Mr -> just rescale
             self.D[changed] *= ratio[changed, None, None]
-            self.Ke[changed] = ed.stiffness_subset(changed, self.D[changed])
+            self.Ke[changed] *= ratio[changed, None, None]
             self.K = assemble(self.Ke, ed.dof, 2 * mesh.n_nodes)
         self.Mr = Mr_new
 
@@ -132,8 +135,9 @@ def iterate(state, solver, F, log=print):
         ratio = Mr_nl / state.Mr[nl]
         ch = nl[ratio != 1.0]
         if ch.size:
-            state.D[ch] *= (Mr_nl / state.Mr[nl])[ratio != 1.0][:, None, None]
-            state.Ke[ch] = ed.stiffness_subset(ch, state.D[ch])
+            r = ratio[ratio != 1.0][:, None, None]
+            state.D[ch] *= r
+            state.Ke[ch] *= r
             state.K = assemble(state.Ke, ed.dof, ndof)
         state.Mr[nl] = Mr_nl
 
@@ -200,7 +204,7 @@ def iterate(state, solver, F, log=print):
         state.MrError = full_err
         ratio = Mr_used / state.Mr[nl]
         state.D[nl] *= ratio[:, None, None]
-        state.Ke[nl] = ed.stiffness_subset(nl, state.D[nl])
+        state.Ke[nl] *= ratio[:, None, None]
         state.K = assemble(state.Ke, ed.dof, ndof)
         state.Mr[nl] = Mr_used
     if not state.converged:

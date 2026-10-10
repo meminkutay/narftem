@@ -1,0 +1,104 @@
+{
+  "name": "East Lansing 3D, dual tires 2 x 4,500 lb, geogrid at mid-base",
+  "layers": [
+    {
+      "name": "AC",
+      "type": "elastic_depth",
+      "thickness_in": 4.0,
+      "E_table": [
+        [
+          0.0,
+          350000
+        ],
+        [
+          1.0,
+          420000
+        ],
+        [
+          2.0,
+          500000
+        ],
+        [
+          4.0,
+          650000
+        ]
+      ],
+      "nu": 0.35,
+      "unit_weight_pcf": 145
+    },
+    {
+      "name": "Base",
+      "type": "universal",
+      "thickness_in": 8.0,
+      "k": [
+        1650.0,
+        0.85,
+        -0.15
+      ],
+      "nu": 0.3,
+      "unit_weight_pcf": 135,
+      "K0": 0.5,
+      "residual_psi": 3.0,
+      "Mr_min_psi": 1000,
+      "geogrids": [
+        {
+          "l_in": 4.0,
+          "delta_in": 6.0,
+          "M_kNm": 427.8,
+          "vg": 0.35,
+          "phi_deg": 51.32,
+          "c_psi": 2.93,
+          "eps0": 0.149,
+          "rho": 72.4,
+          "beta": 0.247,
+          "m": 1.72323,
+          "n": -2.16,
+          "N": 1000000.0
+        }
+      ]
+    },
+    {
+      "name": "Subgrade",
+      "type": "elastic",
+      "E_psi": 15000,
+      "nu": 0.35,
+      "unit_weight_pcf": 120
+    }
+  ],
+  "solver": {
+    "gauss_points": 8,
+    "max_iter": 40,
+    "reliability_pct": 95,
+    "max_error_pct": 5.0,
+    "atm_pressure_psi": 14.706,
+    "backend": "auto",
+    "max_error_vol_pct": 1.5
+  },
+  "tires": [
+    {
+      "x_in": 6.75,
+      "y_in": 0.0,
+      "load_lb": 4500,
+      "pressure_psi": 120,
+      "shape": "circle"
+    },
+    {
+      "x_in": -6.75,
+      "y_in": 0.0,
+      "load_lb": 4500,
+      "pressure_psi": 120,
+      "shape": "circle"
+    }
+  ],
+  "symmetry": "quarter",
+  "domain3d": {
+    "x_max_in": null,
+    "y_max_in": null,
+    "depth_in": null
+  },
+  "mesh3d": {
+    "fine_in": 0.6,
+    "coarse_ratio": 1.0,
+    "z_scale": 3.0
+  }
+}
