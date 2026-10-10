@@ -33,11 +33,13 @@ def b_matrix(N, dN, coords):
     invJ /= detJ[:, None, None]
     dNdrz = np.einsum("nij,kj->nki", invJ, dN)          # (ne,4,2): dN_k/dr, dN_k/dz
     r = coords[:, :, 0] @ N
+    on_axis = r <= 1e-12 * np.max(np.abs(coords[:, :, 0]))
+    rs = np.where(on_axis, 1.0, r)
     B = np.zeros((coords.shape[0], 4, 8))
     for k in range(4):
         B[:, 0, 2 * k] = dNdrz[:, k, 0]
         B[:, 1, 2 * k + 1] = dNdrz[:, k, 1]
-        B[:, 2, 2 * k] = N[k] / r
+        B[:, 2, 2 * k] = np.where(on_axis, dNdrz[:, k, 0], N[k] / rs)   # eps_theta = eps_r on the axis
         B[:, 3, 2 * k] = dNdrz[:, k, 1]
         B[:, 3, 2 * k + 1] = dNdrz[:, k, 0]
     return B, detJ, r
