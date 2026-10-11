@@ -110,7 +110,10 @@ in every iteration), single process.
 
 ## 3. Input format
 
-See the docstring of `schema.py`.  The `structure.layers` entries are nartfem layers (`type`,
+See the docstring of `schema.py`.  AC layers have `type: "ac"` and no modulus field: the modulus
+is |E\*|(T, f) from the `ac` block (|E\*|/|G\*| data or master-curve coefficients), computed per
+month and temperature quintile exactly as in MEAPA and assigned to the AC sublayers before every
+structural solve.  The other `structure.layers` entries are nartfem layers (`type`,
 `thickness_in`, `E_psi`, `nu`, `unit_weight_pcf`, `k`, `K0`, `residual_psi`, `Mr_min_psi`,
 `E_table`, `geogrids` ...) plus `role`, `thermal` and, for AC layers, `ac` (|E\*| / |G\*| data or
 master-curve coefficients, Va, Vbeff, Tref, RTFO, IDT).  `convert_legacy.py` documents the

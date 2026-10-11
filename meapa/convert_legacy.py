@@ -16,6 +16,14 @@ Mapping notes (engineering choices):
   * The reliability thresholds keep MEAPA's fixed order (IRI, TD, BU, TC, total rut, AC rut, RC).
 """
 from __future__ import annotations
+
+# --- make the file runnable as a script (PyCharm "Run") as well as `python -m meapa.convert_legacy` ---
+if __package__ in (None, ""):
+    import os as _os, sys as _sys
+    _ROOT = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+    if _ROOT not in _sys.path:
+        _sys.path.insert(0, _ROOT)
+    __package__ = "meapa"
 import json
 import os
 import sys
@@ -75,8 +83,7 @@ def convert(d: dict, geogrid_flag="a", climate_folder=None) -> dict:
             L.pop("thickness_in")
             L["p4_pct"] = float(d["p4Subg"]); L["p200_pct"] = float(d["p200Subg"])
         if role in ("AC", "EAC"):
-            if L["E_psi"] <= 0:
-                L["E_psi"] = 400000.0          # placeholder: MEAPA replaces it by |E*|(T, f) per climate case
+            L["type"] = "ac"; L.pop("E_psi")   # viscoelastic: modulus = |E*|(T, f) from the 'ac' block
             e = _jsonstr(estar[i]); g = _jsonstr(gstar[i])
             ac = {"Va_pct": float(d["layerVa"][ac_i]), "Vbeff_pct": float(d["layerVbeff"][ac_i]),
                   "Tref_F": float(d["layerTref"][ac_i]), "RTFO": float(d["layerRTFO"][0]),
@@ -171,13 +178,14 @@ def convert_file(src, dst=None, **kw):
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     kw = dict(geogrid_flag=CONFIG["GEOGRID_FLAG"], climate_folder=CONFIG["CLIMATE_FOLDER"])
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))      # CONFIG paths are repo-relative
     if argv:
         src = argv[0]; dst = argv[1] if len(argv) > 1 else None
         print("->", convert_file(src, dst, **kw))
     else:
         for src in CONFIG["IN_FILES"]:
             base = os.path.splitext(os.path.basename(src))[0] + ".meapa2.json"
-            print("->", convert_file(src, os.path.join(CONFIG["OUT_DIR"], base), **kw))
+            print("->", convert_file(os.path.join(root, src), os.path.join(root, CONFIG["OUT_DIR"], base), **kw))
 
 
 if __name__ == "__main__":

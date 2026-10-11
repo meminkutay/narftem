@@ -48,6 +48,7 @@ from nartfem.solid3d import geogrid as gg3d
 from . import schema
 from .engine_base import ResponseEngine, AXLE_KEYS, tire_positions
 
+AC_SEED_PSI = 500000.0        # placeholder stiffness of AC elements before the first |E*| assignment
 NARTFEM_LAYER_KEYS = ("name", "type", "thickness_in", "E_psi", "nu", "unit_weight_pcf", "k", "K0",
                       "residual_psi", "Mr_min_psi", "E_table", "Er_over_Ez", "nu_hor", "geogrids")
 
@@ -62,6 +63,10 @@ def build_model(structure: dict, pressure_psi: float, radius_in: float, TH_sub=N
     for i, (L, r) in enumerate(zip(layers, roles)):
         ld = {k: L[k] for k in NARTFEM_LAYER_KEYS if k in L}
         ld.setdefault("type", "elastic")
+        if r in ("AC", "EAC"):
+            # viscoelastic AC: the modulus is |E*|(T, f) of the climate case, set per element in
+            # solve_case before every solve; the value here is only a non-zero seed for the stiffness
+            ld["type"] = "elastic"; ld["E_psi"] = AC_SEED_PSI; ld.pop("E_table", None)
         if r in ("AC", "EAC") and ac_sublayer_interfaces and TH_sub is not None:
             idx = np.flatnonzero(np.asarray(LayNo_sub) == i)
             for j, k in enumerate(idx):

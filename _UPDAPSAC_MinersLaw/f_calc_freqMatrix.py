@@ -17,7 +17,7 @@ def f_freq_MEPDG(E, hi, ZC_in_subM2, Vmph, CR_in, St, Naxles):
         Ei = E[:Nzcur]
         if Nzcur == 1:
             # if point is in the top sublayer
-            Zeff = ((Ei / Esubg) ** (1 / 3)) * z1[i]
+            Zeff = float(np.sum(((Ei / Esubg) ** (1 / 3)) * z1[i]))  # [compat numpy>=2.3: 1-elem array -> scalar]
         else:
             # otherwise
             Zeff = np.sum(((Ei[:Nzcur-1] / Esubg) ** (1 / 3)) * hi[:Nzcur-1]) \

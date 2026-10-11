@@ -10,7 +10,7 @@ def f_lin_interp1(x, y, xo):
 # linear interpolation. Assumes linear incrrease from previous point to the next.    
     dxo     = x-xo        
     Idxo    = np.argwhere(dxo<=0)         
-    n       = Idxo[-1]
+    n       = int(Idxo[-1][0])  # [compat numpy>=2.3: 1-elem array -> scalar]
     if np.all(y==0): # if only the layer no is needed
         yo = 0
     else:

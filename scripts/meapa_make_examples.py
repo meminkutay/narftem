@@ -45,6 +45,9 @@ def make(legacy_path, structure_path, out_path, climate_override=None):
         if i == 0:
             L["role"] = "AC"; L["ac"] = copy.deepcopy(L_ac["ac"]); L["thermal"] = dict(L_ac["thermal"])
             L["unit_weight_pcf"] = L.get("unit_weight_pcf", L_ac["unit_weight_pcf"])
+            L["type"] = "ac"                       # viscoelastic: |E*|(T, f) from the 'ac' block
+            for k in ("E_psi", "E_table"):          # the nartfem example's fixed modulus is not used by MEAPA
+                L.pop(k, None)
         elif i == n - 1:
             L["role"] = "SUB"; L["thermal"] = dict(L_sub["thermal"])
             L["p4_pct"] = L_sub["p4_pct"]; L["p200_pct"] = L_sub["p200_pct"]

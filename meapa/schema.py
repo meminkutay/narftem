@@ -8,8 +8,9 @@ of MEAPA/nartfem; nothing is converted on input except where stated).
       "name": "FL-131487 | AC 3in / base 5in / SG",
       "structure": {
         "layers": [                       <- the nartfem.axi layer schema AS-IS (model.py), plus:
-          {"name": "AC", "type": "elastic", "thickness_in": 3.0, "E_psi": 400000, "nu": 0.25,
-           "unit_weight_pcf": 150,
+          {"name": "AC", "type": "ac", "thickness_in": 3.0, "nu": 0.25, "unit_weight_pcf": 150,
+                                          <- "ac": viscoelastic; the modulus is |E*|(T, f) from the
+                                             "ac" block per month/quintile (no E_psi / E_table)
            "role": "AC",                  <- MEAPA role: AC | EAC | CSM | BASE | SUB (optional,
                                              derived from position/"ac" block when absent)
            "ac": {                        <- only for AC/EAC layers (MEAPA |E*| / aging / thermal)
@@ -109,7 +110,7 @@ def layer_roles(layers: List[dict]) -> List[str]:
     for i, L in enumerate(layers):
         r = L.get("role")
         if r is None:
-            r = "SUB" if i == len(layers) - 1 else ("AC" if "ac" in L else "BASE")
+            r = "SUB" if i == len(layers) - 1 else ("AC" if ("ac" in L or L.get("type") == "ac") else "BASE")
         if r not in ROLES:
             raise ValueError("layer %d: unknown role %r" % (i, r))
         roles.append(r)
@@ -119,7 +120,7 @@ def layer_roles(layers: List[dict]) -> List[str]:
 def is_all_linear(structure: dict) -> bool:
     """True when MatLEA can represent the structure exactly (no stress-dependent layer, no geogrid)."""
     for L in structure["layers"]:
-        if L.get("type", "elastic") not in ("elastic", "elastic_depth") or L.get("geogrids"):
+        if L.get("type", "elastic") not in ("ac", "elastic", "elastic_depth") or L.get("geogrids"):
             return False
     return True
 
@@ -142,6 +143,10 @@ def validate(d: dict):
     for i, (L, r) in enumerate(zip(layers, roles)):
         if r in ("AC", "EAC") and "ac" not in L:
             raise ValueError("layer %d is AC/EAC but has no 'ac' block" % i)
+        if r in ("AC", "EAC") and L.get("type", "ac") not in ("ac", "elastic"):
+            raise ValueError("layer %d: an AC layer has type 'ac' (modulus = |E*| from the 'ac' block)" % i)
+        if r in ("AC", "EAC") and ("E_psi" in L or "E_table" in L):
+            raise ValueError("layer %d: E_psi / E_table are not used for AC layers (|E*| from the 'ac' block); remove them" % i)
         if "thermal" not in L:
             raise ValueError("layer %d: 'thermal' block (conductivity, heat_capacity) is required" % i)
         if L.get("type", "elastic") in ("universal", "ktheta") and not L.get("k"):

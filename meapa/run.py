@@ -10,6 +10,15 @@ preprocessor: traffic, sublayering, climate, |E*|, thermal cracking) -> Miner's 
 <name>-<engine>-output.json (+ <name>-<engine>-cases.json with the critical strains per case).
 """
 from __future__ import annotations
+
+# --- make the file runnable as a script (PyCharm "Run") as well as `python -m meapa.run` ---
+if __package__ in (None, ""):
+    import os as _os, sys as _sys
+
+    _ROOT = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+    if _ROOT not in _sys.path:
+        _sys.path.insert(0, _ROOT)
+    __package__ = "meapa"
 import argparse
 import copy
 import contextlib
@@ -28,14 +37,16 @@ from .engine_base import context_from_step1
 
 # ----------------------------------------------------------------------------- CONFIG
 CONFIG = dict(
-    INPUT="examples/meapa/FL_AC3_B5_SG4k_noGG.meapa2.json",
-    ENGINE=None,            # None -> input's analysis.response_engine.engine; or "matlea" | "nartfem"
-    YEARS=None,             # None -> input's design life
+    INPUT="examples/meapa/FL_AC3_B5_SG4k_noGG.meapa2.json",  # repo-relative or absolute
+    ENGINE="matlea",  # None -> input's analysis.response_engine.engine; or "matlea" | "nartfem"
+    YEARS=1,  # None -> input's design life
     OUT_DIR="runs",
-    WORKERS=None,           # None -> input's response_engine.workers
-    LOAD_SCALING=None,      # None -> input's; "linear" | "power"
-    QUIET_STEP1=True,       # swallow the legacy preprocessor's console output
+    WORKERS=None,  # None -> input's response_engine.workers
+    LOAD_SCALING=None,  # None -> input's; "linear" | "power"
+    QUIET_STEP1=True,  # swallow the legacy preprocessor's console output
 )
+
+
 # -------------------------------------------------------------------------------------
 
 
@@ -89,13 +100,16 @@ def _worker(args):
 class PrecomputedEngine:
     """Serves responses computed in parallel (chunks of consecutive cases per worker so that the
     nonlinear warm start still applies within a chunk)."""
+
     def __init__(self, name, ctx, d, opt, Ez_rows, levels, workers, log):
         from concurrent.futures import ProcessPoolExecutor
-        self.name = name; self.ctx = ctx
+        self.name = name;
+        self.ctx = ctx
         chunks = np.array_split(np.arange(len(Ez_rows)), workers)
         jobs = [(name, ctx, d, opt, [Ez_rows[i] for i in c], levels) for c in chunks if c.size]
         t0 = time.time()
-        self.cache = {}; self.stats = {"solves": 0, "iterations": 0, "time_s": 0.0, "not_converged": 0, "workers": workers}
+        self.cache = {};
+        self.stats = {"solves": 0, "iterations": 0, "time_s": 0.0, "not_converged": 0, "workers": workers}
         with ProcessPoolExecutor(max_workers=workers) as ex:
             for c, (res, st) in zip([c for c in chunks if c.size], ex.map(_worker, jobs)):
                 for i, r in zip(c, res):
@@ -107,7 +121,8 @@ class PrecomputedEngine:
         log(" --> %d cases precomputed with %d workers in %.0f s" % (len(Ez_rows), workers, self.stats["wall_s"]))
 
     def responses(self, E_sub, levels=(1.0,)):
-        r = self.cache[self._n]; self._n += 1
+        r = self.cache[self._n];
+        self._n += 1
         return r
 
 
@@ -129,7 +144,8 @@ def run(d, engine=None, years=None, out_dir="runs", workers=None, load_scaling=N
     os.makedirs(out_dir, exist_ok=True)
     base = os.path.splitext(os.path.basename(d.get("_source_path", "model.json")))[0].replace(".meapa2", "")
     tag = tag or name
-    log("=== MEAPA run: %s  [engine %s, load scaling %s, %d yr]" % (d.get("name", base), name, opt["load_scaling"], d["analysis"]["design_life_yr"]))
+    log("=== MEAPA run: %s  [engine %s, load scaling %s, %d yr]" % (d.get("name", base), name, opt["load_scaling"],
+                                                                    d["analysis"]["design_life_yr"]))
     S1, inps, LayNo_sub = step1(d, out_dir, quiet_step1, log)
     ctx = context_from_step1(S1, inps, LayNo_sub)
     levels = tuple(opt["power_levels"]) if opt["load_scaling"] == "power" else (1.0,)
@@ -144,7 +160,8 @@ def run(d, engine=None, years=None, out_dir="runs", workers=None, load_scaling=N
     out = run_miners(S1, eng, inps, opt, log=log, record=record)
     # ---- reliability (legacy)
     from f_calc_distress_atrel import f_calc_distress_atrel
-    ld = {"FCbu": out["FCbu_mo"], "FCtd": out["FCtd_mo"], "rut_TAC": out["rut_tot_AC_mo"], "rut_TBASE": out["rut_tot_BASE_mo"],
+    ld = {"FCbu": out["FCbu_mo"], "FCtd": out["FCtd_mo"], "rut_TAC": out["rut_tot_AC_mo"],
+          "rut_TBASE": out["rut_tot_BASE_mo"],
           "rut_TSUBG": out["rut_tot_SUBG_mo"], "rutTOT": out["rutTOT_mo"], "IRI": out["IRI_mo"],
           "TC_mo": np.asarray(S1["TC_mo"]).tolist(), "CSMExists": False, "EACExists": False}
     with contextlib.redirect_stdout(io.StringIO()):
@@ -152,7 +169,9 @@ def run(d, engine=None, years=None, out_dir="runs", workers=None, load_scaling=N
     out["TC_mo"] = ld["TC_mo"]
     for k in ("totrutAtRel", "acrutAtRel", "fcbuAtRel", "fctdtAtRel", "tc_ACAtRel", "iriAtRel"):
         out[k] = ld[k]
-    out["name"] = d.get("name", ""); out["input"] = d.get("_source_path"); out["design_life_yr"] = d["analysis"]["design_life_yr"]
+    out["name"] = d.get("name", "");
+    out["input"] = d.get("_source_path");
+    out["design_life_yr"] = d["analysis"]["design_life_yr"]
     out["layer_names"] = [L.get("name") for L in d["structure"]["layers"]]
     out["sublayer_thickness_in"] = np.asarray(S1["TH_sub"]).tolist()
     out["analysis_depths_in"] = np.asarray(S1["ZC_in_subM"][0]).tolist()
@@ -168,12 +187,18 @@ def run(d, engine=None, years=None, out_dir="runs", workers=None, load_scaling=N
 def main(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument("input", nargs="?", default=CONFIG["INPUT"])
-    p.add_argument("--engine", default=CONFIG["ENGINE"]); p.add_argument("--years", type=int, default=CONFIG["YEARS"])
-    p.add_argument("--out", default=CONFIG["OUT_DIR"]); p.add_argument("--workers", type=int, default=CONFIG["WORKERS"])
-    p.add_argument("--load-scaling", default=CONFIG["LOAD_SCALING"]); p.add_argument("--tag", default=None)
+    p.add_argument("--engine", default=CONFIG["ENGINE"]);
+    p.add_argument("--years", type=int, default=CONFIG["YEARS"])
+    p.add_argument("--out", default=CONFIG["OUT_DIR"]);
+    p.add_argument("--workers", type=int, default=CONFIG["WORKERS"])
+    p.add_argument("--load-scaling", default=CONFIG["LOAD_SCALING"]);
+    p.add_argument("--tag", default=None)
     a = p.parse_args(argv)
-    d = load_any(a.input)
-    run(d, a.engine, a.years, a.out, a.workers, a.load_scaling, CONFIG["QUIET_STEP1"], tag=a.tag)
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    inp = a.input if os.path.isabs(a.input) else os.path.join(root, a.input)  # CONFIG paths are repo-relative
+    out = a.out if os.path.isabs(a.out) else os.path.join(root, a.out)
+    d = load_any(inp)
+    run(d, a.engine, a.years, out, a.workers, a.load_scaling, CONFIG["QUIET_STEP1"], tag=a.tag)
 
 
 if __name__ == "__main__":
