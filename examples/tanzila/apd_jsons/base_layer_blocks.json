@@ -1,0 +1,38 @@
+{
+ "base-control": {
+  "name": "Base",
+  "type": "universal",
+  "k": [
+   539.341,
+   0.4185,
+   0.6149
+  ],
+  "calibration": {
+   "briB": 0.965
+  }
+ },
+ "base-HSR-equiv": {
+  "name": "Base",
+  "type": "universal",
+  "k": [
+   597.0166,
+   0.4879,
+   0.8339
+  ],
+  "calibration": {
+   "briB": 0.911
+  }
+ },
+ "base-HSR-rutonly": {
+  "name": "Base",
+  "type": "universal",
+  "k": [
+   539.341,
+   0.4185,
+   0.6149
+  ],
+  "calibration": {
+   "briB": 0.739
+  }
+ }
+}
