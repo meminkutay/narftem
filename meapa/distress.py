@@ -9,8 +9,10 @@ UPDAPSAC_STEP2.py) with two generalizations:
         "power"   - solutions at several load levels (pressure x level), log-log interpolation
                     in P between the levels, log-log extrapolation outside.
 
-With the MatLEA engine and linear scaling the numbers are identical to the legacy loop (the
-legacy njit transfer functions are called unchanged for Nf, plastic strain, wander and IRI).
+With the MatLEA engine, linear scaling and ``rut_monotone = False`` the numbers are identical
+to the legacy loop (the legacy njit transfer functions are called unchanged for Nf, plastic
+strain, wander and IRI).  ``rut_monotone = True`` (default, option analysis.response_engine.
+rut_monotone) adds the guard that plastic strains never decrease - see ``_no_decrease``.
 
 Only the AC-over-granular-base structure (no CSM, no existing AC) is implemented here; CSM /
 EAC structures keep using the legacy f_struc_resp_ACCSM / f_struc_resp_ACEAC.
@@ -78,15 +80,34 @@ def damage_at_loads(ec_by_load, X, E, N_mo, Bi, ki, C, CH, X_Wander):
     return D_mx
 
 
+RUT_MONOTONE = True   # plastic strain never decreases (see _no_decrease); False = legacy behaviour
+
+
+def _no_decrease(ep_new, ep_old):
+    """Permanent deformation cannot heal: where the strain-hardening update gives a smaller value
+    or NaN/inf, keep the previous plastic strain.  In the legacy functions a position whose
+    critical strain is zero in this climate case (vertical strain clipped - e.g. between the
+    tires in cold months - or kzrut = 0) gets denom = 0 -> nEQ = inf -> eps_p = NaN, and the NaN
+    is reset to 0 at the next case, so the accumulated strain at that position restarted from
+    zero every year (the seasonal 'dips' of the AC/base rut)."""
+    if not RUT_MONOTONE:
+        return ep_new
+    bad = ~np.isfinite(ep_new) | (ep_new < ep_old)
+    return np.where(bad, ep_old, ep_new)
+
+
 def eps_AC_with_N(ec_by_load, N_mo, epLAST, kzrut, Briz, kriz, T_Qnti):
     """ff_calc_eps_AC_with_N with explicit strain per load (numWander = 1 as in the legacy code)."""
     NL = ec_by_load.shape[0]
     e_p = np.zeros((NL, ec_by_load.shape[1]))
+    epLAST = np.where(np.isfinite(epLAST), epLAST, 0.0)
     for j in range(NL):
         e_c1O = ec_by_load[j]
-        nEQ = ff_calc_nEQ_AC(e_c1O, epLAST, kzrut, Briz, kriz, T_Qnti)
-        nCOR = nEQ + N_mo[j]
-        epLAST = ff_calc_eps_plastic_AC(e_c1O, kzrut, Briz, kriz, T_Qnti, nCOR)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            nEQ = ff_calc_nEQ_AC(e_c1O, epLAST, kzrut, Briz, kriz, T_Qnti)
+            nCOR = nEQ + N_mo[j]
+            ep_new = ff_calc_eps_plastic_AC(e_c1O, kzrut, Briz, kriz, T_Qnti, nCOR)
+        epLAST = _no_decrease(ep_new, epLAST)
         e_p[j] = epLAST
     return e_p
 
@@ -102,15 +123,18 @@ def eps_BASE_with_N(ec_by_load, N_mo, epLAST, BriBSsub, Erut, GWT):
     Cozi = np.log(a1 / a9)
     rhozi = (10 ** 9) * (Cozi / (1 - 10 ** (9 * Betazi))) ** (1 / Betazi)
     Re = ((np.exp(rhozi ** Betazi) * a1) + (np.exp((rhozi / 10 ** 9) ** Betazi) * a9)) / 2
+    epLAST = np.where(np.isfinite(epLAST), epLAST, 0.0)
     for j in range(NL):
         e_c1O = ec_by_load[j]
         epsMaxAtInf = BriBSsub * Re * e_c1O
-        nEQ = ff_calc_nEQ_BASE(epLAST, epsMaxAtInf, rhozi, Betazi)
-        nCOR = nEQ + N_mo[j]
-        epLASTnext = ff_calc_eps_plastic_BASE(e_c1O, BriBSsub, Re, rhozi, Betazi, nCOR)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            nEQ = ff_calc_nEQ_BASE(epLAST, epsMaxAtInf, rhozi, Betazi)
+            nCOR = nEQ + N_mo[j]
+            epLASTnext = ff_calc_eps_plastic_BASE(e_c1O, BriBSsub, Re, rhozi, Betazi, nCOR)
         Iinf = np.where(nCOR > 1e12)[0]
         if len(Iinf) > 0:
             epLASTnext[Iinf] = epLAST[Iinf]
+        epLASTnext = _no_decrease(epLASTnext, epLAST)
         e_p[j] = epLASTnext
         epLAST = epLASTnext
     return e_p
@@ -121,6 +145,8 @@ def run_miners(S1, engine, inps, opt, log=print, record=None):
     """S1: Step1Output (legacy); engine: ResponseEngine; inps: legacy inps (for loads);
     opt: engine options (load_scaling, power_levels).  Returns the legacy out_resp dict plus
     'cases' (per-case critical strains) when ``record`` is a list."""
+    global RUT_MONOTONE
+    RUT_MONOTONE = bool(opt.get("rut_monotone", True))
     mode = opt.get("load_scaling", "linear")
     levels = tuple(opt.get("power_levels", [0.5, 1.0, 2.0])) if mode == "power" else (1.0,)
     al = S1["analysisLoc"];

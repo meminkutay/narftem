@@ -26,13 +26,14 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 # ----------------------------------------------------------------------------- CONFIG
+INPUT_DIR = "/Users/Kutay/MEAPARuns/meapa_nartfem/gg_anl/retry"
 CONFIG = dict(
-    INPUT_DIR="/Users/Kutay/MEAPARuns/meapa_nartfem/no_gg",  # folder with the input JSONs (repo-relative or absolute)
+    INPUT_DIR=INPUT_DIR,  # folder with the input JSONs (repo-relative or absolute)
     PATTERN="*.json",  # glob inside INPUT_DIR ("*.meapa2.json" to skip legacy files)
     ENGINES=["nartfem"],  # one run per engine per input: "nartfem", "matlea", or "auto"
     YEARS=None,  # None -> design life of each input
-    OUT_DIR="/Users/Kutay/MEAPARuns/meapa_nartfem/no_gg/out",
-    JOBS=4,  # runs in flight at the same time (processes)
+    OUT_DIR=f"{INPUT_DIR}/out",
+    JOBS=1,  # runs in flight at the same time (processes)
     LOAD_SCALING=None,  # None -> input's; "linear" | "power"
     SKIP_EXISTING=True,  # skip a job whose -output.json already exists
 )
