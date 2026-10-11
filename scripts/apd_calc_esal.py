@@ -19,7 +19,8 @@ if ROOT not in sys.path:
 
 # ----------------------------------------------------------------------------- CONFIG
 CONFIG = dict(
-    FILES=["examples/apd/FL_AC3_B5_SG4k_noGG.apd.json"],     # paths or globs, repo-relative or absolute
+    # FILES=["examples/apd/FL_AC3_B5_SG4k_noGG.apd.json"],     # paths or globs, repo-relative or absolute
+    FILES=["/Users/Kutay/MEAPARuns/meapa_nartfem/tanzila/gg_tanzila/gg_AC4_B6.apd.json"],     # paths or globs, repo-relative or absolute
     CSV=None,                                                # e.g. "runs/esal.csv"
 )
 # -------------------------------------------------------------------------------------
@@ -41,8 +42,8 @@ def main(files, csv_path=None):
         row.update({"ESAL_" + k: v for k, v in e["ESAL_by_axle_group"].items()})
         row.update({"axles_" + k: v for k, v in e["axles_total_by_group"].items()})
         rows.append(row)
-        print("%-50s AADTT %6.0f  %2d yr  ESAL total %.4g  (first year %.4g; si %.3g ta %.3g tr %.3g qd %.3g)" % (
-            row["input"], e["aadtt"], e["ESAL_design_life_yr"], e["ESAL_total"], e["ESAL_first_year"],
+        print("%-50s AADTT %6.0f  %2d yr  ESAL total %.1f Million  (first year %.4g; si %.3g ta %.3g tr %.3g qd %.3g)" % (
+            row["input"], e["aadtt"], e["ESAL_design_life_yr"], e["ESAL_total"]/1e6, e["ESAL_first_year"],
             e["ESAL_by_axle_group"]["si"], e["ESAL_by_axle_group"]["ta"], e["ESAL_by_axle_group"]["tr"], e["ESAL_by_axle_group"]["qd"]))
     if csv_path:
         csv_path = csv_path if os.path.isabs(csv_path) else os.path.join(ROOT, csv_path)
