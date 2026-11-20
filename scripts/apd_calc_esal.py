@@ -21,6 +21,7 @@ if ROOT not in sys.path:
 CONFIG = dict(
     # FILES=["examples/apd/FL_AC3_B5_SG4k_noGG.apd.json"],     # paths or globs, repo-relative or absolute
     FILES=["/Users/Kutay/MEAPARuns/meapa_nartfem/tanzila/gg_tanzila/gg_AC4_B6.apd.json"],     # paths or globs, repo-relative or absolute
+    # FILES=["/Users/Kutay/MEAPARuns/meapa_nartfem/tanzila/gg_tanzila/*.apd.json"],     # paths or globs, repo-relative or absolute
     CSV=None,                                                # e.g. "runs/esal.csv"
 )
 # -------------------------------------------------------------------------------------

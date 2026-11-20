@@ -1,0 +1,40 @@
+nartfem Strain Calculator - how to use
+======================================
+
+1. Start the program
+   Windows: double-click nartfem_strains.exe
+            (first time: "Windows protected your PC" -> More info -> Run anyway)
+   Mac:     right-click nartfem_strains -> Open -> Open
+   A black text window appears and, after 10-20 seconds, a page opens in your web
+   browser. Leave the black window open while you work. Nothing is sent over the
+   internet; the page talks only to the program on your computer.
+
+2. Enter the model
+   Pick a starting point from "Examples...", or "Open..." one of the files in the
+   examples folder, then edit the numbers in the Input box:
+     - "layers": top to bottom. thickness_in, E_psi (modulus), nu (Poisson's ratio).
+       The last layer is the subgrade and has no thickness.
+     - "load":
+         single      pressure_psi, radius_in
+         dual        pressure_psi, radius_in, spacing_in (center to center)
+         footprint   rib_width_in, rib_lengths_in, rib_pressures_psi,
+                     n_tires (1 = wide-base, 2 = dual), tire_spacing_in
+   Units: inches, psi, pounds.
+
+3. Press Run
+   The results appear on the right:
+     - Max tensile strain at the bottom of the asphalt (microstrain, + = tension)
+     - Vertical strain at the top of the subgrade (microstrain, - = compression)
+     - the strain profiles across the lane and the contact area that was used
+   If the input has a mistake, a red message under the Input box says what to fix.
+
+4. Many runs at once (thickness / modulus study)
+   Add a "sweep" block (see example "Batch: AC thickness x AC modulus"):
+       "sweep": { "AC.thickness_in": [3, 5, 7, 9], "AC.E_psi": [200000, 400000, 800000] }
+   Every combination is run. Use "Copy table" and paste into Excel, or "Download CSV".
+
+5. Keep your work
+   "Save" stores the input as a .json file; "Download profile CSV" stores the curves.
+
+6. Quit
+   Press Quit on the page (or close the black window).

@@ -11,8 +11,9 @@ from nartfem.axi import mesh as meshmod
 
 # ------------------------------------------------------------------ CONFIG (edit here)
 CONFIG = dict(
-    cases=["examples/FL_AC3_B5_SG4k_GG.json",
-           "examples/FL_AC3_B5_SG4k_noGG.json"],
+    cases=["/Users/Kutay/PycharmProjects/nartfem/examples/fem/FL_AC3_B5_SG4k_noGG_eg.json"],
+    # cases=["/Users/Kutay/PycharmProjects/nartfem/examples/fem/FL_AC3_B5_SG4k_noGG.json",
+    #        "/Users/Kutay/PycharmProjects/nartfem/examples/fem/FL_AC3_B5_SG4k_noGG.json"],
     same_mesh=True,      # run all cases on the mesh of the first case (clean with/without comparisons)
     fields=True,         # one figure per case with mesh + Mr + confinement + stresses + strains (<case>_fields.png)
     plot=False,          # also individual maps (<case>_Mr.png, _strain_z.png, _delsig.png)
